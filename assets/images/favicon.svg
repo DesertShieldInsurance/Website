@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="Desert Shield Insurance">
+  <title>Desert Shield Insurance</title>
+  <!--
+    Simplified favicon mark. The full logo (shield + chevron + colonnade) turns
+    to mush below ~32px, so this reduces to the two shapes that stay legible in
+    a browser tab: the tan shield silhouette and the navy chevron.
+    The detailed logo is used at larger sizes (apple-touch-icon.png, site header).
+  -->
+  <defs>
+    <clipPath id="dsShieldClip">
+      <path d="M100,20 C74,20 46,27 37,38 L37,119 C37,149 45,173 61,193 C74,210 87,219 100,225 C113,219 126,210 139,193 C155,173 163,149 163,119 L163,38 C154,27 126,20 100,20 Z"/>
+    </clipPath>
+  </defs>
+
+  <!-- Navy tile keeps the mark legible against both light and dark browser chrome -->
+  <rect width="256" height="256" rx="52" fill="#1b3557"/>
+
+  <g transform="translate(32,6.6) scale(0.96)">
+    <path d="M100,14 C70,14 38,22 28,35 L28,120 C28,153 37,180 55,203 C70,222 85,232 100,239 C115,232 130,222 145,203 C163,180 172,153 172,120 L172,35 C162,22 130,14 100,14 Z" fill="#e3c08c"/>
+    <g clip-path="url(#dsShieldClip)">
+      <polygon points="56,34 144,34 155,76 100,114 45,76" fill="#1b3557"/>
+    </g>
+  </g>
+</svg>

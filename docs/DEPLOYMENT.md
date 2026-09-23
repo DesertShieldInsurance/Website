@@ -97,6 +97,10 @@ Not yet tested: session expiry (8 h), concurrent admin edits, email-provider fai
 - Production admin credentials and authenticator QR were delivered to the owner's Mac desktop (`Desert-Shield-Referral-Production-Admin.txt`, `Desert-Shield-Referral-Production-Authenticator-QR.png`). Move to a password manager, then delete.
 - No production deployment was triggered; `main` is unchanged.
 
+### Live launch (September 23, 2026)
+
+`preview/partner-referrals` was fast-forwarded into `main` (152e508) and deployed. Existing pages were verified byte-identical. Production flags: `REFERRALS_ENABLED=true`, `REFERRAL_REWARDS_APPROVED=true` (owner approved the $25 offer on Sep 23, 2026). Live smoke test on desertshieldinsurance.com passed: complete-packet submission via the $25 path, tracking page with no sensitive data, confirmation email delivered from referrals@desertshieldinsurance.com, admin sign-in with password + authenticator, gift-card approve/not-eligible controls, packet decrypt, close referral, sign out. The test record "Launch Smoke Test Carrier LLC" (DOT 1112223) is closed and marked not eligible; it may be left as a reference. Remaining: add a navigation link when ready, invite brokers, and periodically review gift-card fulfillment.
+
 ### Complete launch checks
 
 - Submit a basic and a complete fictional referral.

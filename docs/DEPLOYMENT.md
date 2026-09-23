@@ -90,6 +90,13 @@ Passed: basic and complete fictional submissions saved; permission checkbox requ
 
 Not yet tested: session expiry (8 h), concurrent admin edits, email-provider failure path, rate limits, mobile/dark-mode/keyboard pass, production CSP, analytics exclusion. Reward path untested because `REFERRAL_REWARDS_APPROVED=false` pending counsel.
 
+### Production configuration (September 23, 2026)
+
+- Neon production branch `br-billowing-tree-aueftkn9` now has a restricted login role `referral_app` (SELECT/INSERT/UPDATE on referral tables, DELETE only on `referral_sessions`, sequence usage; no DDL, no DELETE on referrals). Production table still empty.
+- Vercel **Production** environment has all eleven variables (Secret type, Production only): `REFERRALS_ENABLED=false`, `REFERRAL_REWARDS_APPROVED=false`, `REFERRAL_ORIGIN=https://desertshieldinsurance.com` (canonical bare domain; API also accepts `www.`), fresh encryption key, admin password hash, authenticator secret, rate-limit secret, production `DATABASE_URL`, notify/from addresses, and a sending-only Resend key named "Desert Shield referrals - Vercel production".
+- Production admin credentials and authenticator QR were delivered to the owner's Mac desktop (`Desert-Shield-Referral-Production-Admin.txt`, `Desert-Shield-Referral-Production-Authenticator-QR.png`). Move to a password manager, then delete.
+- No production deployment was triggered; `main` is unchanged.
+
 ### Complete launch checks
 
 - Submit a basic and a complete fictional referral.

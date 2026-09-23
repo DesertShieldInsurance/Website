@@ -155,6 +155,7 @@ strong { color: var(--color-text); font-weight: 700; }
   font-weight: 600;
 }
 .main-nav__links a {
+  white-space: nowrap;
   padding-block: var(--space-2);
   border-bottom: 2px solid transparent;
   color: var(--color-text-muted);
@@ -218,13 +219,30 @@ strong { color: var(--color-text); font-weight: 700; }
   border: 1px solid var(--color-border);
 }
 
-@media (max-width: 960px) {
+@media (min-width: 1101px) {
+  .main-nav { gap: var(--space-5); }
+  .main-nav__links { gap: var(--space-4); font-size: 0.875rem; }
+  .nav-actions { gap: var(--space-2); }
+}
+@media (min-width: 1101px) and (max-width: 1240px) {
+  .nav-actions .btn { display: none; }
+}
+@media (max-width: 640px) {
+  .hide-mobile { display: none !important; }
+}
+@media (max-width: 1100px) {
   .main-nav__links, .has-dropdown .dropdown { display: none; }
   .nav-toggle { display: inline-flex; }
   .nav-row.is-open .main-nav {
-    position: fixed;
-    inset: 0;
-    top: 105px;
+    /* Absolute (not fixed): the header's backdrop-filter makes it the containing block,
+       which clipped a fixed panel to the header height. */
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: calc(100dvh - 130px);
+    border-bottom: 1px solid var(--color-divider);
+    box-shadow: 0 16px 32px rgba(0,0,0,0.18);
     background: var(--color-bg);
     flex-direction: column;
     align-items: stretch;

@@ -8,8 +8,13 @@ const json=(res,status,value)=>res.status(status).json(value);
 const fail=(status,message)=>Object.assign(new Error(message),{status});
 function configured(){return required.every(k=>process.env[k])&&Buffer.from(process.env.REFERRAL_ENCRYPTION_KEY||'','base64').length===32;}
 function origin(){return new URL(process.env.REFERRAL_ORIGIN).origin;}
+function allowedOrigins(){
+  const o=new URL(origin());const hosts=new Set([o.host]);
+  if(o.hostname.startsWith('www.'))hosts.add(o.host.slice(4));else hosts.add('www.'+o.host);
+  return [...hosts].map(h=>`${o.protocol}//${h}`);
+}
 function assertOrigin(req){
-  if(req.headers.origin!==origin())throw fail(403,'This request must come from the agency website.');
+  if(!allowedOrigins().includes(req.headers.origin))throw fail(403,'This request must come from the agency website.');
   if(!String(req.headers['content-type']||'').startsWith('application/json'))throw fail(415,'JSON is required.');
 }
 function parseBody(req){

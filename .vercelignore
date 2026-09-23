@@ -1,0 +1,11 @@
+.git
+.env*
+preview
+qa
+tests
+docs
+scripts/migrate.mjs
+scripts/build-preview.mjs
+scripts/referral-demo.js
+db
+README*

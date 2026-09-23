@@ -1,6 +1,11 @@
 {
+  "buildCommand": "npm run build",
+  "outputDirectory": "public",
   "cleanUrls": false,
   "trailingSlash": false,
+  "rewrites": [
+    { "source": "/admin/referrals", "destination": "/admin-referrals.html" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
@@ -9,6 +14,15 @@
         { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" }
+      ]
+    },
+    {
+      "source": "/(partner-referrals.html|referral-status.html|admin-referrals.html|admin/referrals)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" },
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" },
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://api.fontshare.com; font-src 'self' https://cdn.fontshare.com https://api.fontshare.com; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'" }
       ]
     }
   ]

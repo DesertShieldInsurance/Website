@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive"><meta name="referrer" content="no-referrer">
+<title>Intake Manager | Desert Shield Insurance</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/intake/style.css"><script defer src="/assets/intake/access.js"></script>
+</head><body data-view="admin">
+<header><a class="brand" href="/index.html"><img src="/assets/intake/logo.png" width="58" height="58" alt="Desert Shield Insurance"><span>DESERT SHIELD<small>AGENCY INTAKE MANAGER</small></span></a><button id="theme" class="quiet">Dark mode</button></header>
+<main class="copy-shell" id="access"><h1>Client intakes</h1><p>Sign in with your existing agency administrator password and authenticator code. This is separate from the public intake form.</p>
+<form id="login" class="login-form"><label>Password<input type="password" id="password" autocomplete="current-password" required></label><label>Authenticator code<input id="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required></label><button class="primary">Sign in</button></form>
+<div id="adminActions" hidden class="review-actions"><button id="refresh" class="secondary">Refresh</button><a class="quiet" href="/admin/referrals">Referral manager</a><button id="logout" class="quiet">Sign out</button></div>
+<p id="message" role="status" aria-live="polite"></p><div id="records"></div></main>
+<footer class="copy-shell">Confidential agency access. Provider acceptance does not prove inbox delivery. <a href="/privacy-policy.html">Privacy policy</a></footer>
+</body></html>

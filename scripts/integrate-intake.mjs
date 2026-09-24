@@ -14,6 +14,10 @@ for(const entry of await readdir(root)){
     const type=entry.startsWith('personal')?'personal':entry.startsWith('business')?'business':'trucking';
     html=html.replace('<a href="contact.html" class="btn btn--primary">Get a Same-Day Quote</a>',
       `<a href="client-intake.html#${type}" class="btn btn--primary">Start Your ${type==='trucking'?'Trucking ':type==='personal'?'Personal ':type==='business'?'Business ':''}Intake</a>`);
+    if(entry==='business-insurance.html'||entry==='personal-insurance.html'){
+      html=html.replaceAll('<a href="contact.html" class="btn btn--primary">Get a Quote</a>',
+        `<a href="client-intake.html#${type}" class="btn btn--primary">Start Your ${type==='personal'?'Personal':'Business'} Intake</a>`);
+    }
   }
   await writeFile(url,html);
 }

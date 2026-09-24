@@ -209,6 +209,8 @@ strong { color: var(--color-text); font-weight: 700; }
 .theme-toggle:hover { background: var(--color-surface-offset); }
 
 .nav-actions { display: flex; align-items: center; gap: var(--space-4); }
+.intake-nav-link { display: none; }
+@media (max-width: 1240px) { .intake-nav-link { display: list-item; } }
 .nav-toggle {
   display: none;
   width: 40px;

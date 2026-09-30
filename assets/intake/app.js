@@ -162,7 +162,8 @@ function renderSubmission(sheet){
     sending=true;submit.disabled=true;message.textContent='Creating and securely saving your completed form…';
     try{
       const result=await api('submit',{requestId:requestIds[type],type,version:schema.version,values:values(),
-        verificationId:verification.id,ticket:verification.ticket,sharingPermission:true,website:''});
+        verificationId:verification.id,ticket:verification.ticket,sharingPermission:true,website:'',
+        attribution:window.dsiAttribution?window.dsiAttribution.get():{}});
       submitted[type]=result;status('');render();$('main').scrollIntoView({behavior:'smooth'});
     }catch(e){message.textContent=e.message;submit.disabled=false}
     finally{sending=false}

@@ -25,8 +25,12 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
-  gtag('config', 'G-TKCV4EXP35');
+  var verifiedLeadReceipt = document.cookie.split('; ').some(function (c) {
+    return /^dsi_lead_success=(?:[a-f0-9-]{36}|lead-\d+)$/.test(c);
+  });
+  gtag('config', 'G-TKCV4EXP35', {send_page_view: verifiedLeadReceipt});
   gtag('config', 'AW-10990082035');
+  document.cookie = 'dsi_lead_success=; Path=/; Max-Age=0; SameSite=Lax';
 </script>
 <!-- Meta Pixel Code -->
 <script>
@@ -188,6 +192,7 @@ src="https://www.facebook.com/tr?id=2116385842295842&ev=PageView&noscript=1"/></
     </div>
   </div>
 </footer>
+<script src="assets/js/attribution.js"></script>
 <script src="assets/js/site.js"></script>
 </body>
 </html>

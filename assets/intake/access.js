@@ -21,6 +21,8 @@ async function loadRecords(){
       const item=el('article',{className:'intake-record'}),ref='DSI-'+r.id.slice(0,8).toUpperCase();
       item.append(el('h2',{},r.name),el('p',{},`${ref} · ${r.type} · ${new Date(r.createdAt).toLocaleString()}`),
         el('p',{},`Email: prospect ${r.prospectEmailStatus}; agency ${r.agencyEmailStatus}. Download link ${r.revoked?'revoked':'expires '+new Date(r.expiresAt).toLocaleDateString()}.`));
+      const a=r.attribution||{};
+      item.append(el('p',{},'Acquisition: '+[a.utm_source||'Not attributed',a.utm_campaign,a.keyword].filter(Boolean).join(' · ')));
       const actions=el('div',{className:'review-actions'}),pdf=el('button',{className:'primary'},'Download PDF');
       pdf.onclick=async()=>{pdf.disabled=true;try{download(await request('download',{id:r.id},{pdf:true}),ref+'.pdf');msg('Completed form downloaded.')}catch(e){if(e.status===401)signedOut();msg(e.message)}finally{pdf.disabled=false}};
       const retry=el('button',{className:'secondary'},'Retry pending emails');

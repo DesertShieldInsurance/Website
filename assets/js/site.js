@@ -103,6 +103,11 @@
   // whatever backend the form is ultimately wired to.
   var contactForm = document.querySelector('[data-consent-form]');
   if (contactForm) {
+    if (window.dsiAttribution) window.dsiAttribution.addToForm(contactForm);
+    var leadId = window.crypto && crypto.randomUUID ? crypto.randomUUID() : 'lead-' + Date.now();
+    var leadIdField = document.createElement('input');
+    leadIdField.type = 'hidden'; leadIdField.name = 'quote_request_id'; leadIdField.value = leadId;
+    contactForm.append(leadIdField);
     var smsCheckbox = contactForm.querySelector('[data-sms-checkbox]');
     var tsField = contactForm.querySelector('[data-consent-timestamp]');
     var pageField = contactForm.querySelector('[data-consent-page]');
@@ -120,6 +125,7 @@
     }
 
     contactForm.addEventListener('submit', function (e) {
+      if (window.dsiAttribution) window.dsiAttribution.addToForm(contactForm);
       // Stamp the consent record fields at the moment of submission.
       if (tsField) tsField.value = new Date().toISOString();
       if (pageField) pageField.value = window.location.href;
@@ -144,6 +150,12 @@
         .then(function (response) { return response.json(); })
         .then(function (data) {
           if (data && data.success) {
+            // Only a confirmed backend success unlocks the measured thank-you
+            // page. Direct visits and refreshes must not manufacture leads.
+            try {
+              document.cookie = 'dsi_lead_success=' + encodeURIComponent(leadId) +
+                '; Path=/; SameSite=Lax; Max-Age=120' + (location.protocol === 'https:' ? '; Secure' : '');
+            } catch (_) {}
             // Record the lead in GA4, then move to the thank-you page. The
             // event_callback lets the hit land before navigation; the timer is
             // a fallback so the redirect never stalls if GA is blocked.
@@ -159,6 +171,8 @@
             if (typeof window.gtag === 'function') {
               window.gtag('event', 'generate_lead', {
                 form_name: 'contact_quote_request',
+                lead_type: (contactForm.querySelector('[name="lead_type"]') || {}).value || 'contact',
+                lead_id: leadId,
                 page_location: window.location.href,
                 event_callback: goToThankYou
               });

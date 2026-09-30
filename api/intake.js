@@ -167,6 +167,7 @@ export function createHandler({sqlFactory=neon,mail=sendMail,pdf=createIntakePDF
       const rows=await sql`SELECT id,intake_type,private_encrypted,created_at,prospect_email_status,agency_email_status,token_expires_at,token_revoked
         FROM intake_submissions ORDER BY created_at DESC LIMIT 200`;
       return json(res,200,rows.map(r=>({id:r.id,type:r.intake_type,name:decrypt(r.private_encrypted).values.legal_name,
+        attribution:decrypt(r.private_encrypted).attribution||{},
         createdAt:r.created_at,prospectEmailStatus:r.prospect_email_status,agencyEmailStatus:r.agency_email_status,expiresAt:r.token_expires_at,revoked:r.token_revoked})));
     }
     if(!uuid(body.id))throw fail(400,'Invalid intake reference.');

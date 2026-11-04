@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import { randomUUID, createHmac } from 'node:crypto';
-import { referralSchema, patchSchema, publicNotes, hash, token, encrypt, decrypt, verifyPassword, verifyTotp, publicReferral, within30 } from '../lib/referral-domain.mjs';
+import { referralSchema, patchSchema, publicNotes, typeLabels, hash, token, encrypt, decrypt, verifyPassword, verifyTotp, publicReferral, within30 } from '../lib/referral-domain.mjs';
 
 const required = ['DATABASE_URL','REFERRAL_ENCRYPTION_KEY','ADMIN_PASSWORD_HASH','ADMIN_TOTP_SECRET','RATE_LIMIT_SECRET','RESEND_API_KEY','REFERRAL_EMAIL_FROM','REFERRAL_ORIGIN'];
 const cookieName='__Host-ds-referral';
@@ -49,10 +49,18 @@ function adminRow(r){
   const privateData=decrypt(r.private_encrypted);
   const {vins,drivers,...contact}=privateData;
   delete contact.requestId;delete contact.website;
+  contact.referralType=r.referral_type||contact.referralType||'trucking';
   return {...publicReferral(r),private:contact,version:r.version,emailStatus:r.email_status,tokenRevoked:r.token_revoked};
 }
 function trackingURL(t){return `${origin()}/referral-status.html#/status/${t}`;}
-async function sendConfirmation(sql,r,force=false){
+async function sendMail(body,idempotencyKey){
+  const response=await fetch('https://api.resend.com/emails',{
+    method:'POST',headers:{Authorization:`Bearer ${process.env.RESEND_API_KEY}`,'Content-Type':'application/json','Idempotency-Key':idempotencyKey},
+    body:JSON.stringify(body),signal:AbortSignal.timeout(12000)
+  });
+  return response.ok?'accepted':'failed';
+}
+async function sendConfirmation(sql,r,mail,force=false){
   if(r.email_status==='accepted'&&!force)return 'accepted';
   if(r.token_revoked||new Date(r.token_expires_at)<=new Date())throw fail(409,'This tracking link is revoked or expired. Do not resend it.');
   const info=decrypt(r.email_encrypted);
@@ -62,20 +70,17 @@ async function sendConfirmation(sql,r,force=false){
       from:process.env.REFERRAL_EMAIL_FROM,
       to:[info.to],
       subject:'Your Desert Shield referral was received',
-      text:`Thank you for the introduction.\n\nWe received your referral for ${r.company}. Our team will contact the carrier about their insurance needs.\n\nFollow the referral's progress here:\n${trackingURL(info.token)}\n\nKeep this link private. Anyone with it can view this referral's limited status. It expires after 90 days. Driver license numbers and dates of birth are never shown on this page.\n\n${r.reward_status==='pending_review'?'Your proposed $25 gift card is pending verification of a complete, eligible submission. It does not depend on a policy purchase.\n\n':''}A referral is not a quote or binder. Coverage is not in force until the agency confirms it.\n\nChris Conover\nDesert Shield Insurance\n480.789.1844\nChris@desertshieldinsurance.com`
+      text:`Thank you for the introduction.\n\nWe received your ${(typeLabels[r.referral_type]||'Trucking').toLowerCase()} insurance referral for ${r.company}. Our team will reach out to them about their insurance needs.\n\nFollow the referral's progress here:\n${trackingURL(info.token)}\n\nKeep this link private. Anyone with it can view this referral's limited status. It expires after 90 days.${r.referral_type==='trucking'||!r.referral_type?' Driver license numbers and dates of birth are never shown on this page.':''}\n\n${r.reward_status==='pending_review'?'Your proposed $25 gift card is pending verification of a complete, eligible submission. It does not depend on a policy purchase.\n\n':''}A referral is not a quote or binder. Coverage is not in force until the agency confirms it.\n\nChris Conover\nDesert Shield Insurance\n480.789.1844\nChris@desertshieldinsurance.com`
     };
     if(process.env.REFERRAL_NOTIFY_EMAIL)body.bcc=[process.env.REFERRAL_NOTIFY_EMAIL];
-    const response=await fetch('https://api.resend.com/emails',{
-      method:'POST',headers:{Authorization:`Bearer ${process.env.RESEND_API_KEY}`,'Content-Type':'application/json','Idempotency-Key':force?`referral-${r.id}-${randomUUID()}`:`referral-${r.id}`},
-      body:JSON.stringify(body),signal:AbortSignal.timeout(12000)
-    });
-    if(response.ok)status='accepted';
+    status=await mail(body,force?`referral-${r.id}-${randomUUID()}`:`referral-${r.id}`);
   }catch{/* Never log email payloads, tokens, or provider credentials. */}
   await sql`UPDATE referrals SET email_status=${status} WHERE id=${r.id}`;
   await sql`INSERT INTO referral_audit (referral_id,action) VALUES (${r.id},${'confirmation_email_'+status})`;
   return status;
 }
-export default async function handler(req,res){
+export function createHandler({sqlFactory=neon,mail=sendMail}={}){
+  return async function handler(req,res){
   res.setHeader('Cache-Control','no-store, private, max-age=0');
   res.setHeader('Pragma','no-cache');
   res.setHeader('X-Robots-Tag','noindex, nofollow, noarchive');
@@ -89,7 +94,7 @@ export default async function handler(req,res){
     if(method!==methods[action]){res.setHeader('Allow',methods[action]);return json(res,405,{error:'Method not allowed.'});}
     if(action==='config')return json(res,200,{enabled:configured()&&process.env.REFERRALS_ENABLED==='true',rewards:process.env.REFERRAL_REWARDS_APPROVED==='true'});
     if(!configured())throw fail(503,'Online referrals are being set up. Please call the agency.');
-    const sql=neon(process.env.DATABASE_URL);
+    const sql=sqlFactory(process.env.DATABASE_URL);
     if(method!=='GET')assertOrigin(req);
     const body=method==='GET'?{}:parseBody(req);
     if(action==='submit'){
@@ -106,24 +111,25 @@ export default async function handler(req,res){
         return json(res,200,{id:existing.id,token:info.token,trackingUrl:trackingURL(info.token),emailStatus:existing.email_status});
       }
       const id=randomUUID(), t=token();
-      const reward=p.complete&&within30(p.coverageDate)&&process.env.REFERRAL_REWARDS_APPROVED==='true'?'pending_review':'not_eligible';
+      // The $25 complete-packet offer is a trucking program; personal and business referrals are a plain thank-you.
+      const reward=p.referralType==='trucking'&&p.complete&&within30(p.coverageDate)&&process.env.REFERRAL_REWARDS_APPROVED==='true'?'pending_review':'not_eligible';
       const secret=encrypt(p),emailInfo=encrypt({to:p.brokerEmail,token:t});
       const rows=await sql`WITH added AS (
-        INSERT INTO referrals (id,request_id,request_hash,token_hash,token_expires_at,company,private_encrypted,coverage_date,vehicle_count,driver_count,packet_complete,reward_status,email_encrypted)
-        VALUES (${id},${p.requestId},${requestHash},${hash(t)},now()+interval '90 days',${p.insuredName},${secret},${p.coverageDate||null},${p.vins.length},${p.drivers.length},${p.complete},${reward},${emailInfo})
+        INSERT INTO referrals (id,request_id,request_hash,token_hash,token_expires_at,company,referral_type,public_note,private_encrypted,coverage_date,vehicle_count,driver_count,packet_complete,reward_status,email_encrypted)
+        VALUES (${id},${p.requestId},${requestHash},${hash(t)},now()+interval '90 days',${p.insuredName},${p.referralType},${publicNotes[0]},${secret},${p.coverageDate||null},${p.vins.length},${p.drivers.length},${p.complete},${reward},${emailInfo})
         ON CONFLICT (request_id) DO NOTHING RETURNING *
       ), activity AS (
         INSERT INTO referral_events (referral_id,status,note,actor) SELECT id,'received',${publicNotes[0]},'submission' FROM added
       ) SELECT * FROM added`;
       if(!rows.length)throw fail(409,'A matching submission is being saved. Try again in a moment.');
-      const r=rows[0],emailStatus=await sendConfirmation(sql,r);
+      const r=rows[0],emailStatus=await sendConfirmation(sql,r,mail);
       return json(res,201,{id,token:t,trackingUrl:trackingURL(t),emailStatus});
     }
     if(action==='status'){
       await limit(sql,req,'status',180,60);
       const t=String(req.headers.authorization||'').replace(/^Bearer /,'');
       if(!/^[A-Za-z0-9_-]{43}$/.test(t))throw fail(404,'This link is invalid, expired, or revoked.');
-      const [r]=await sql`SELECT id,company,status,public_note,created_at,updated_at,packet_complete,vehicle_count,driver_count,reward_status FROM referrals WHERE token_hash=${hash(t)} AND token_expires_at>now() AND token_revoked=false`;
+      const [r]=await sql`SELECT id,company,referral_type,status,public_note,created_at,updated_at,packet_complete,vehicle_count,driver_count,reward_status FROM referrals WHERE token_hash=${hash(t)} AND token_expires_at>now() AND token_revoked=false`;
       if(!r)throw fail(404,'This link is invalid, expired, or revoked.');
       const events=await sql`SELECT status,note,created_at FROM referral_events WHERE referral_id=${r.id} ORDER BY created_at,id`;
       return json(res,200,publicReferral(r,events));
@@ -186,10 +192,12 @@ export default async function handler(req,res){
       const id=idCheck(body.id);
       const [r]=await sql`SELECT * FROM referrals WHERE id=${id}`;
       if(!r)throw fail(404,'Referral not found.');
-      return json(res,200,{emailStatus:await sendConfirmation(sql,r,true)});
+      return json(res,200,{emailStatus:await sendConfirmation(sql,r,mail,true)});
     }
   }catch(e){
     // Deliberately avoid logging requests, SQL parameters, private fields, or bearer links.
     return json(res,e.status||500,{error:e.status?e.message:'We could not complete this request. Please try again or call the agency.'});
   }
+  };
 }
+export default createHandler();

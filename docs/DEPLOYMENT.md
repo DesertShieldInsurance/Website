@@ -101,6 +101,17 @@ Not yet tested: session expiry (8 h), concurrent admin edits, email-provider fai
 
 `preview/partner-referrals` was fast-forwarded into `main` (152e508) and deployed. Existing pages were verified byte-identical. Production flags: `REFERRALS_ENABLED=true`, `REFERRAL_REWARDS_APPROVED=true` (owner approved the $25 offer on Sep 23, 2026). Live smoke test on desertshieldinsurance.com passed: complete-packet submission via the $25 path, tracking page with no sensitive data, confirmation email delivered from referrals@desertshieldinsurance.com, admin sign-in with password + authenticator, gift-card approve/not-eligible controls, packet decrypt, close referral, sign out. The test record "Launch Smoke Test Carrier LLC" (DOT 1112223) is closed and marked not eligible; it may be left as a reference. Remaining: add a navigation link when ready, invite brokers, and periodically review gift-card fulfillment.
 
+### Personal and business referrals (November 4, 2026)
+
+The partner page now opens with three tiles: Personal, Business and Trucking. Trucking keeps its original eight questions, the basic/complete choice and the $25 complete-packet path. The two new flows are deliberately short and never block a partner who is missing a detail:
+
+- **Personal:** their name → coverage needed (chips, skippable) → phone and/or email (one is enough) → optional details (city/ZIP, coverage date, notes) → review.
+- **Business:** business name → what they do (skippable) → coverage needed (chips, skippable) → contact name, phone and/or email (one contact method is enough) → optional details (team size, city/ZIP, coverage date, notes) → review.
+
+Server-side, `referralSchema` validates by `referralType`; trucking requirements are unchanged, non-trucking submissions require a name plus one contact method and reject VIN/driver packets and `complete`. Non-trucking referrals are always `reward_status = not_eligible`; the admin hides gift-card and packet controls for them and shows a “Referral details” block instead. Broker-visible notes were reworded to be type-neutral; the previous wording is still accepted so existing records keep working.
+
+Database: apply `db/003-referral-types.sql` (additive `referral_type` column with default `trucking`, a check constraint and a neutral `public_note` default) **before** deploying the new API, because the insert names the new column. Existing rows become trucking referrals. `db/001-referrals.sql` is a reconstruction of the live schema so the referral handler can be tested against an in-process database (`tests/referral.test.mjs`).
+
 ### Complete launch checks
 
 - Submit a basic and a complete fictional referral.

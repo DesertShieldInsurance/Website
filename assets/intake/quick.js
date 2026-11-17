@@ -10,6 +10,22 @@
   var SMS_LANGUAGE = 'By checking this box, I agree to receive SMS/text messages from Desert Shield Insurance LLC at the mobile number provided, including messages related to my inquiry, quotes, account, services, and follow-up communications. Message frequency may vary. Message and data rates may apply. Reply STOP to opt out and HELP for help. Consent is not a condition of purchase.';
   var FAIL = 'Something went wrong sending your request. Please call or text 480.789.1844, or email Chris@desertshieldinsurance.com directly.';
   var $ = function (id) { return document.getElementById(id); };
+  var LEAD_DASHBOARD_URL = 'https://desert-shield-lead-dashboard.vercel.app/api/lead';
+  var LEAD_DASHBOARD_SKIP = { access_key: 1, subject: 1, from_name: 1, botcheck: 1, sms_consent_language: 1 };
+  // Copy an accepted quick quote to the Desert Shield lead dashboard (campaign source,
+  // cost per lead, pipeline). Fire-and-forget: it never delays or blocks the visitor.
+  function sendToLeadDashboard(formData) {
+    try {
+      var payload = {};
+      formData.forEach(function (value, key) {
+        if (typeof value === 'string' && !LEAD_DASHBOARD_SKIP[key]) payload[key] = value.slice(0, 2000);
+      });
+      payload.form_name = 'Website quick quote (' + location.pathname + ')';
+      var body = JSON.stringify(payload);
+      if (navigator.sendBeacon && navigator.sendBeacon(LEAD_DASHBOARD_URL, new Blob([body], { type: 'text/plain' }))) return;
+      fetch(LEAD_DASHBOARD_URL, { method: 'POST', mode: 'cors', keepalive: true, headers: { 'Content-Type': 'text/plain' }, body: body }).catch(function () {});
+    } catch (_) { /* never block the quote request */ }
+  }
 
   function setMode(mode) {
     var quick = mode === 'quick';
@@ -88,6 +104,7 @@
         .then(function (r) { return r.json(); })
         .then(function (data) {
           if (!data || !data.success) throw new Error('rejected');
+          sendToLeadDashboard(fd);
           try {
             document.cookie = 'dsi_lead_success=' + encodeURIComponent(leadId) +
               '; Path=/; SameSite=Lax; Max-Age=120' + (location.protocol === 'https:' ? '; Secure' : '');

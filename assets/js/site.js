@@ -102,6 +102,21 @@
   // into hidden fields so a full consent record travels with every lead,
   // whatever backend the form is ultimately wired to.
   var contactForm = document.querySelector('[data-consent-form]');
+
+  var LEAD_DASHBOARD_URL = 'https://desert-shield-lead-dashboard.vercel.app/api/lead';
+  var LEAD_DASHBOARD_SKIP = { access_key: 1, subject: 1, from_name: 1, redirect: 1, sms_consent_language: 1 };
+  function sendToLeadDashboard(formData) {
+    try {
+      var payload = {};
+      formData.forEach(function (value, key) {
+        if (typeof value === 'string' && !LEAD_DASHBOARD_SKIP[key]) payload[key] = value.slice(0, 2000);
+      });
+      payload.form_name = (contactForm.getAttribute('name') || 'website') + ' (' + location.pathname + ')';
+      var body = JSON.stringify(payload);
+      if (navigator.sendBeacon && navigator.sendBeacon(LEAD_DASHBOARD_URL, new Blob([body], { type: 'text/plain' }))) return;
+      fetch(LEAD_DASHBOARD_URL, { method: 'POST', mode: 'cors', keepalive: true, headers: { 'Content-Type': 'text/plain' }, body: body }).catch(function () {});
+    } catch (_) { /* never block the quote request */ }
+  }
   if (contactForm) {
     if (window.dsiAttribution) window.dsiAttribution.addToForm(contactForm);
     var leadId = window.crypto && crypto.randomUUID ? crypto.randomUUID() : 'lead-' + Date.now();
@@ -150,6 +165,9 @@
         .then(function (response) { return response.json(); })
         .then(function (data) {
           if (data && data.success) {
+            // Copy the accepted request to the Desert Shield lead dashboard (campaign source,
+            // cost per lead, pipeline). Fire-and-forget: it never delays or blocks the visitor.
+            sendToLeadDashboard(formData);
             // Only a confirmed backend success unlocks the measured thank-you
             // page. Direct visits and refreshes must not manufacture leads.
             try {

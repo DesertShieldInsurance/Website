@@ -62,6 +62,7 @@
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
+      if (btn.disabled) return;
       box.hidden = true;
       var name = $('qName'), phone = $('qPhone'), email = $('qEmail');
       var picked = Array.prototype.map.call(form.querySelectorAll('[name=quote_type]:checked'), function (c) { return c.value; });
@@ -101,10 +102,11 @@
 
       btn.disabled = true; btn.textContent = 'Sending…';
       fetch(ENDPOINT, { method: 'POST', body: fd, headers: { Accept: 'application/json' } })
-        .then(function (r) { return r.json(); })
+        .then(function (r) { if (!r.ok) throw new Error('rejected'); return r.json(); })
         .then(function (data) {
-          if (!data || !data.success) throw new Error('rejected');
+          if (!data || data.success !== true) throw new Error('rejected');
           sendToLeadDashboard(fd);
+          if (!fd.get('botcheck') && window.dsiChatGptAds) window.dsiChatGptAds.recordAcceptedQuote(leadId);
           try {
             document.cookie = 'dsi_lead_success=' + encodeURIComponent(leadId) +
               '; Path=/; SameSite=Lax; Max-Age=120' + (location.protocol === 'https:' ? '; Secure' : '');
